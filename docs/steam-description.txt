@@ -1,0 +1,44 @@
+[h1]True Mercy[/h1]
+Stops burn and poison from killing a pal that Mercy is keeping alive for capture. The Mercy Ring and the Mercy Hit passive stop you knocking a pal below 1 HP, but burn keeps ticking after that and kills it at 1 HP anyway. Poison does the same. Your 10,000 damage fireball can't kill the pal, and then a 25 damage burn tick does.
+
+Burn and poison can no longer take that last point of health while Mercy applies. They still hurt normally the whole way down though. Only the final point doesn't kill them. Capture rates and damage are untouched.
+
+[h2]Requirements[/h2]
+[list]
+[*][url=https://steamcommunity.com/sharedfiles/filedetails/?id=3625223587]UE4SS Experimental (Palworld)[/url] (Steam Workshop)
+[/list]
+Subscribe to both this and UE4SS Experimental, then enable them in-game under Options -> Mod Management and restart.
+
+[h2]Multiplayer[/h2]
+[list]
+[*]Only the host or server needs it. Players connecting to a modded server need nothing.
+[*]A client-only install does nothing, because the server decides whether the pal lives.
+[/list]
+
+[h2]What's protected[/h2]
+A pal survives at 1 HP if it was burned or poisoned by:
+[list]
+[*]You, wearing the Mercy Ring
+[*]A pal you're riding, while you wear the ring
+[*]Any pal with the Mercy Hit passive, ridden or not
+[/list]
+
+[h2]What isn't[/h2]
+[list]
+[*]Your pal fighting on foot when the ring is your only source. A pal inherits your ring only while you're riding it. That's base game behavior, not something this mod changes. Ride the pal, or use one with Mercy Hit.
+[*]Lava, campfires and other environmental fire. Those aren't mercy hits, so they'll still die from regular fire.
+[*]Wild pals fighting each other, unless one has Mercy Hit.
+[/list]
+
+[h2]Config Options[/h2]
+Optional, in Mods\TrueMercy\Scripts\config.lua:
+[list]
+[*][b]ProtectFromBurn[/b] (default true): stops burn taking a protected pal's last point of health.
+[*][b]ProtectFromPoison[/b] (default true): the same for poison, the only other damage-over-time a pal can inflict.
+[*][b]DebugLogging[/b] (default false): logs each pal the mod protects or skips, and why. Noisy in normal play. Turning it off never hides an error.
+[/list]
+Anything missing or mistyped falls back to its default and says so in the log.
+
+[h2]Links[/h2]
+Also available on [url=https://www.nexusmods.com/palworld/mods/PLACEHOLDER]NexusMods[/url].
+Source code on [url=https://github.com/SSyl/TrueMercy]GitHub[/url].
