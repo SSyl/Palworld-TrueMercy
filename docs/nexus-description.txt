@@ -1,63 +1,57 @@
 [size=4][b]Description[/b][/size]
-[size=3][color=#D4D4D8]This mod stops burn and poison from killing a pal that Mercy is keeping alive for capture.
+[size=3][color=#D4D4D8]Without this mod, burn and poison ignore Mercy. You weaken a pal down to 1 HP so you can throw a sphere, and then the fire finishes it off anyway.
 
-The Mercy Ring and the Mercy Hit passive stop you knocking a pal below 1 HP, so you can weaken it and throw a sphere. But if the pal is on fire, the burn keeps ticking after that and kills it at 1 HP anyway. Poison does the same. Your 10,000 damage fireball can't kill the pal, and then a 25 damage burn tick does.
-
-Burn and poison can no longer take that last point of health while Mercy applies. They still hurt normally the whole way down - a burning pal at full health burns exactly as fast as it always did. Only the final point changes. Capture rates, damage numbers and everything else are untouched.[/color][/size]
+This mod stops burn and poison taking that last point of health while Mercy applies. They still do full damage the whole way down to 1 HP. Nothing else changes.[/color][/size]
 
 [size=4][b]What's protected[/b][/size]
 [size=3][color=#D4D4D8]A pal survives at 1 HP if it was burned or poisoned by:[/color][/size]
 [list]
-[*][size=3][color=#D4D4D8]You, wearing the Mercy Ring[/color][/size][/*]
-[*][size=3][color=#D4D4D8]A pal you're riding, while you wear the ring[/color][/size][/*]
-[*][size=3][color=#D4D4D8]Any pal with the Mercy Hit passive, ridden or not[/color][/size][/*]
+[*][size=3][color=#D4D4D8]You, wearing the Mercy Ring or Pal Tamer's Glasses[/color][/size][/*]
+[*][size=3][color=#D4D4D8]A pal you're riding, while you wear the ring or glasses[/color][/size][/*]
+[*][size=3][color=#D4D4D8]Any pal with the Mercy Hit passive, when you're not riding it[/color][/size][/*]
 [/list]
 
 [size=4][b]What isn't[/b][/size]
 [list]
-[*][size=3][color=#D4D4D8]Your pal fighting on foot when the ring is your only source. A pal inherits your ring only while you're riding it. That's how the base game already behaves and this mod matches it rather than changing it - ride the pal, or use one with Mercy Hit.[/color][/size][/*]
-[*][size=3][color=#D4D4D8]Lava, campfires and other environmental fire. Nothing attacked the pal, so there's no Mercy to inherit.[/color][/size][/*]
-[*][size=3][color=#D4D4D8]Wild pals fighting each other, unless one of them has Mercy Hit.[/color][/size][/*]
+[*][size=3][color=#D4D4D8]Your pal fighting on foot, if the ring or glasses is your only source[/color][/size][/*]
+[*][size=3][color=#D4D4D8]A pal you're riding that has Mercy Hit, if you aren't wearing the ring or glasses[/color][/size][/*]
+[*][size=3][color=#D4D4D8]Lava, campfires and other environmental fire[/color][/size][/*]
+[*][size=3][color=#D4D4D8]Wild pals fighting each other, unless one has Mercy Hit[/color][/size][/*]
 [/list]
+[size=3][color=#D4D4D8]Riding a pal swaps whose Mercy counts, from the pal's to yours. That's the base game, not this mod.[/color][/size]
 
 [size=4][b]Installation instructions[/b][/size]
-[size=3][color=#D4D4D8]A pal's health is decided by whoever is hosting, so the mod only has to run there. Players connecting to a modded server need nothing.
+[size=3][color=#D4D4D8]Only one machine needs this, and it's whichever one is running the world:
 
-1. Install UE4SS for Palworld.
-2. Copy the TrueMercy folder into your UE4SS Mods folder, so you end up with:
+  Playing solo - your own PC.
+  Hosting for friends from inside the game - your own PC. Your friends install nothing.
+  Dedicated server - the server. You and everyone joining install nothing.
+
+Putting it on your own PC while you play on someone else's server does nothing at all.
+
+1. Install UE4SS for Palworld on that machine.
+2. Copy the TrueMercy folder into its UE4SS Mods folder, so you end up with:
   Mods\TrueMercy\Scripts\main.lua
   Mods\TrueMercy\Scripts\config.lua
   Mods\TrueMercy\enabled.txt
-3. Singleplayer or hosting for friends: install in your own game. Dedicated server: install on the server.
-4. Start the game.
-
-Installing it only on a client connected to a dedicated server does nothing, because the server still decides whether the pal lives.[/color][/size]
+3. Start the game.[/color][/size]
 
 [size=4][b]Configuration[/b][/size]
-[size=3][color=#D4D4D8]Optional. There's a config.lua in the mod folder (Mods\TrueMercy\Scripts\config.lua) with three settings:
+[size=3][color=#D4D4D8]Optional, in Mods\TrueMercy\Scripts\config.lua:
 
-ProtectFromBurn (default true) - stops burn taking a protected pal's last point of health.
+ProtectFromBurn (default true) - burn can't take a protected pal's last point of health.
 
-ProtectFromPoison (default true) - the same for poison. It's the only other damage-over-time a pal can inflict, and it kills through Mercy the same way.
+ProtectFromPoison (default true) - the same for poison.
 
-DebugLogging (default false) - writes a line to UE4SS.log for each pal the mod protects or skips, and why. Useful for checking it works, or for finding out you weren't riding the pal you thought you were. Noisy during normal play. Turning it off never hides an error.
+ProtectHumanNPCs (default true) - human NPCs get the same protection as pals. Set it to false if you're running a mod like No Mercy For Humans.
 
-Anything missing or mistyped falls back to its default and says so in the log, so a typo won't silently break the mod.[/color][/size]
+DebugLogging (default false) - logs each pal the mod protects or skips, and why. Noisy during normal play.
 
-[size=4][b]Main features[/b][/size]
-[list]
-[*][size=3][color=#D4D4D8]Burn and poison can't finish off a pal that Mercy is holding at 1 HP.[/color][/size][/*]
-[*][size=3][color=#D4D4D8]Full damage the whole way down to 1 HP - burn isn't nerfed, it just can't land the kill.[/color][/size][/*]
-[*][size=3][color=#D4D4D8]Works with the Mercy Ring and the Mercy Hit passive, together or separately.[/color][/size][/*]
-[*][size=3][color=#D4D4D8]Matches base game behavior on which pals inherit your ring, rather than widening it.[/color][/size][/*]
-[*][size=3][color=#D4D4D8]Lava, campfires and drowning are left alone - Mercy never covered those either.[/color][/size][/*]
-[*][size=3][color=#D4D4D8]Only the host or server needs it. Players connecting need nothing.[/color][/size][/*]
-[*][size=3][color=#D4D4D8]Doesn't touch capture rates, damage, or anything in your save.[/color][/size][/*]
-[/list]
+Anything missing or mistyped falls back to its default and says so in the log.[/color][/size]
 
 [size=4][b]Requirements[/b][/size]
 [list]
-[*][size=3][color=#D4D4D8]Palworld 1.0.1[/color][/size][/*]
+[*][size=3][color=#D4D4D8]Palworld 1.0.2[/color][/size][/*]
 [*][size=3][color=#D4D4D8]UE4SS installed for Palworld[/color][/size][/*]
 [/list]
 
@@ -66,4 +60,4 @@ Anything missing or mistyped falls back to its default and says so in the log, s
 
 [size=4][b]Links[/b][/size]
 [size=3][color=#D4D4D8]Also available on the [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3773035536]Steam Workshop[/url].
-Source code on [url=https://github.com/SSyl/TrueMercy]GitHub[/url].[/color][/size]
+Source code on [url=https://github.com/SSyl/Palworld-TrueMercy]GitHub[/url].[/color][/size]
