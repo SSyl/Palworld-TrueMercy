@@ -318,6 +318,23 @@ RegisterHook("/Script/Pal.PalDamageReactionComponent:CallOnDamageDelegateAlways"
 
             local previous = mercyByVictim[victimAddress]
 
+            -- A hit that cannot take the last point is not evidence about who owns the DoT, so it
+            -- must not revoke a standing verdict. Daedream, Dazzi and Dazzi Noct attack from the
+            -- party, and their pokes were overwriting the active pal's Mercy verdict and letting
+            -- the next burn tick kill.
+            --
+            -- Measured: reads true on those partner skill hits, false on a Mercy Hit pal's own.
+            -- Narrowed to a downgrade because bCannotKill is a per-attack flag on UPalAttackFilter
+            -- (Pal.hpp:16675) any skill effect can set, so this can only hold protection, never
+            -- drop it.
+            --
+            -- Ordered so the Lua checks gate the struct read, which is the only part reaching UE
+            -- and would otherwise run on every damage event server-wide.
+            if not protected and previous ~= nil and previous.protected
+                and damageResult.bCannotKill == true then
+                return
+            end
+
             RememberVictim(victimAddress, {
                 protected = protected,
                 reasonKind = reasonKind,
