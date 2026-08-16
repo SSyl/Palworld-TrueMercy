@@ -1,14 +1,12 @@
 -- True Mercy - makes Burn and Poison respect the Mercy ring and the Mercy Hit passive.
 --
--- Burn never enters the path Mercy lives in. It calls SlipDamage (Pal.hpp:20184), whose
--- signature carries no attacker and no bCannotKill. So this records who applied it when the
--- hit lands, and clamps the tick to leave 1 HP.
+-- Records who applied the DoT when the hit lands, and clamps the tick to leave 1 HP.
 --
 -- Authority only. HP is server-owned, so a client can change a damage popup and nothing else.
 
 local EFFECT_NON_KILLING = 70 -- EPalPassiveSkillEffectType::NonKilling, Pal_enums.hpp:4112
 
--- EPalDeadType, Pal_enums.hpp:1460. The only two a pal can inflict; the rest are environmental.
+-- EPalDeadType, Pal_enums.hpp:1460. The only two a pal can inflict. The rest are environmental.
 local DEAD_TYPE_POISON, DEAD_TYPE_BURN = 5, 6
 
 local DEAD_TYPE_NAMES = {
@@ -19,9 +17,7 @@ local DEAD_TYPE_NAMES = {
 
 local TRACKED_VICTIM_LIMIT = 256
 
--- BP_Status_Burn_C's Duration default is 15s, and re-applying it needs a hit, which also
--- refreshes the record, so anything still burning from a Mercy source is inside this.
--- Without it a pal hit once with the ring on sits at 1 HP in a campfire forever - measured.
+-- BP_Status_Burn_C's Duration default is 15s. Set to 20 because os.time is imprecise.
 local RECORD_STALE_SECONDS = 20
 
 -- A lone string can contain a "%", a pal name for instance, that string.format would eat.
@@ -130,8 +126,6 @@ local function ShortName(object)
     return full:match("([^%.%/]+)$") or full
 end
 
--- Identity for table keys. GetFullName walks the outer chain and builds an FString;
--- GetAddress is a pointer read. Both hooks run per damage event server-wide.
 local function AddressOf(object)
     if not object:IsValid() then return nil end
     return object:GetAddress()
@@ -150,7 +144,7 @@ local PLAYER_CHARACTER_CLASS = "/Script/Pal.PalPlayerCharacter"
 
 local resolvedObjects, warnedPaths = {}, {}
 
--- Palworld ships bUseUObjectArrayCache=false, so a lookup walks the entire GUObjectArray.
+-- Palworld ships bUseUObjectArrayCache=false. A lookup costs a walk of the entire GUObjectArray.
 local function ResolveObject(objectPath)
     local resolved = resolvedObjects[objectPath]
     if resolved ~= nil and resolved:IsValid() then return resolved end
@@ -168,13 +162,12 @@ end
 local function HasNonKilling(character)
     local passiveComponent = ReadObject(character, "PassiveSkillComponent")
     if not passiveComponent:IsValid() then return false end
-    -- containEquip=true is required. The ring is equipment and the bare query misses it.
+    -- The true passed to HasSkill is containEquip, which is what checks for the ring.
     return passiveComponent:HasSkill(EFFECT_NON_KILLING, true)
 end
 
--- Only resolves while the pal is ridden, which is the point: an unmounted otomo does not
--- inherit its owner's ring in vanilla. GetTrainerPlayer was tried first and reverted, since it
--- resolves for any player-owned pal and so protects otomo the game leaves unprotected.
+-- Only resolves while the pal is ridden. GetTrainerPlayer was tried first and reverted
+-- because it resolves for any player-owned pal.
 local function ResolveRider(attacker)
     local markerClass = ResolveObject(RIDE_MARKER_CLASS)
     if not markerClass:IsValid() or not attacker:IsValid() then return CreateInvalidObject() end
@@ -185,9 +178,7 @@ local function ResolveRider(attacker)
     return rideMarker:GetRiderCharacter()
 end
 
--- The reason is returned alongside the verdict because a bare "no Mercy" reads the same whether
--- the attacker was correctly unridden or the rider walk failed on a mount, and those are
--- opposite conclusions.
+-- The reason is returned to show whether the rider, pal, or no one had mercy.
 local REASON_TEXT = {
     noAttacker   = "no attacker",
     ownMercy     = "own Mercy",
@@ -196,12 +187,6 @@ local REASON_TEXT = {
     riderNoMercy = "ridden by %s, who has no Mercy",
 }
 
--- Riding transfers the question to the rider: a mount carrying Mercy Hit stops sparing anything
--- while ridden by someone without the ring, measured in vanilla with no mods loaded. So a rider,
--- when there is one, is the whole answer and the mount's own passive does not get a say.
---
--- Rider is returned rather than named: naming costs an outer-chain walk, and this runs per
--- damage event to serve a line printed at most once.
 local function EvaluateMercy(attacker)
     if not attacker:IsValid() then return false, "noAttacker" end
 
@@ -221,21 +206,12 @@ local function DescribeReason(record)
     return string.format(text, ShortName(record.rider))
 end
 
--- The class is resolved once because IsA(string) re-runs StaticFindObject on every call
--- (is_a_implementation, LuaUObject.cpp:2132), which walks the whole array here.
+-- Caching here because IsA(string) reruns StaticFindObject which walks the whole UObjectArray.
 local function IsPlayerCharacter(victim)
     local playerClass = ResolveObject(PLAYER_CHARACTER_CLASS)
     return playerClass:IsValid() and victim:IsA(playerClass)
 end
 
--- IsPal (Pal.hpp:34599) is per-character class data: true for pals, false for humans and for
--- players. UPalUtility::IsPalCharacter is not a substitute, it reads true for human NPCs too.
--- The `== true` is load-bearing, since an absent property returns an invalid object rather than
--- nil and would pass a bare truthiness test.
---
--- Players stay protected in both modes. Vanilla Mercy floors them as well: the Arena disables
--- NonKilling and nothing else (BP_PalArenaWorldSubsystem, DisablePassiveTypes), which only makes
--- sense if it applies everywhere else.
 local function IsProtectableVictim(victim)
     local staticComponent = ReadObject(victim, "StaticCharacterParameterComponent")
     if not staticComponent:IsValid() then return false end
@@ -255,11 +231,11 @@ local function CurrentDisplayHP(victim)
     return tonumber(library:Convert_FixedPoint64ToInt(paramComponent:GetHP()))
 end
 
--- Keyed by object address. A record's natural lifetime is its victim's, so entries are dropped
--- once the actor is gone rather than on a clock or a generation counter: the pal you are
--- burning to capture is the one you have stopped hitting, and anything driven by churn would
--- evict it mid-burn. IsValid answers this directly, going false once the engine deletes the
--- object (FLuaObjectDeleteListener::NotifyUObjectDeleted, LuaUObject.cpp:74).
+-- Keyed by object address. Entries are dropped once the actor is gone rather than on a
+-- clock. The pal you are burning to capture is the one you have stopped hitting, and
+-- anything driven by churn would evict it mid-burn.
+--
+-- IsValid goes false once the engine deletes the object (LuaUObject.cpp:74).
 local mercyByVictim = {}
 local victimCount, sweepThreshold = 0, TRACKED_VICTIM_LIMIT
 
@@ -281,9 +257,7 @@ local function RememberVictim(victimAddress, record)
     if victimCount > sweepThreshold then SweepDeadVictims() end
 end
 
--- Not cached: one process can leave a dedicated server and start a singleplayer game, where it
--- becomes the authority, and a cached "no" would stay wrong all session. HasAuthority is on
--- Actor, not ActorComponent, so this takes the actor the caller already has.
+-- Never cache Authority as a player may leave a server and start an SP game or vice versa.
 local warnedNotAuthority = false
 
 local function OnAuthority(actor)
@@ -301,7 +275,7 @@ local function OnAuthority(actor)
 end
 
 -- Every hit overwrites, so a later attacker without Mercy makes the target killable again.
--- Gating here disables the mod on a client: no records means the clamp below finds nothing.
+-- Gating here disables the mod on a client.
 RegisterHook("/Script/Pal.PalDamageReactionComponent:CallOnDamageDelegateAlways",
     function(Context, DamageResult)
         local okHook, hookError = pcall(function()
@@ -318,18 +292,12 @@ RegisterHook("/Script/Pal.PalDamageReactionComponent:CallOnDamageDelegateAlways"
 
             local previous = mercyByVictim[victimAddress]
 
-            -- A hit that cannot take the last point is not evidence about who owns the DoT, so it
-            -- must not revoke a standing verdict. Daedream, Dazzi and Dazzi Noct attack from the
-            -- party, and their pokes were overwriting the active pal's Mercy verdict and letting
-            -- the next burn tick kill.
+            -- Pals like Dazzi attack from party and their auto attacks were overwriting mercy
+            -- and letting burn kill on next tick.
+            -- Dazzi's attacks carry bCannotKill, which we weren't checking against.
             --
-            -- Measured: reads true on those partner skill hits, false on a Mercy Hit pal's own.
-            -- Narrowed to a downgrade because bCannotKill is a per-attack flag on UPalAttackFilter
-            -- (Pal.hpp:16675) any skill effect can set, so this can only hold protection, never
-            -- drop it.
-            --
-            -- Ordered so the Lua checks gate the struct read, which is the only part reaching UE
-            -- and would otherwise run on every damage event server-wide.
+            -- Ordered so the Lua checks gate the struct read rather than every server-wide
+            -- damage event.
             if not protected and previous ~= nil and previous.protected
                 and damageResult.bCannotKill == true then
                 return
@@ -338,29 +306,25 @@ RegisterHook("/Script/Pal.PalDamageReactionComponent:CallOnDamageDelegateAlways"
             RememberVictim(victimAddress, {
                 protected = protected,
                 reasonKind = reasonKind,
-                -- Held as objects, not names: naming costs an outer-chain walk per hit,
-                -- and only the one log line per verdict reads them. The victim is what the
-                -- sweep tests to decide the record has outlived its actor.
+                -- Held as objects instead of names to avoid an outer-chain walk.
                 victim = defender,
                 attacker = attacker,
                 rider = rider,
                 time = Now(),
-                -- Carried across overwrites while the verdict holds. An attacker pinning a
-                -- pal at 1 HP keeps landing hits, and resetting this would reprint
-                -- the line on every tick that follows one.
+                -- Carried across overwrites while the verdict holds. Resetting this would
+                -- reprint every tick.
                 reported = (previous ~= nil and previous.protected == protected)
                     and previous.reported or false,
-                -- Carried too, or it recomputes after every hit and the cache buys nothing.
-                -- Not an `and/or` chain: this is tri-state, and `or nil` would turn a cached
-                -- false back into nil.
                 protectable = previous and previous.protectable,
             })
         end)
         if not okHook then ReportHandlerError("record", hookError) end
     end)
 
--- Drown, BodyTemperature, Falling and Ground share this path and the same hole, but nothing a
--- player controls inflicts them, so covering them would only stop lava and cold.
+-- Burn never enters the path Mercy lives in. It calls SlipDamage (Pal.hpp:20184), whose
+-- signature carries no attacker and no bCannotKill.
+--
+-- Drown, BodyTemperature, Falling and Ground also share this path.
 RegisterHook("/Script/Pal.PalDamageReactionComponent:SlipDamage",
     function(Context, Damage, ShieldIgnore, DeadType, ClearShield)
         local okHook, hookError = pcall(function()
@@ -377,13 +341,11 @@ RegisterHook("/Script/Pal.PalDamageReactionComponent:SlipDamage",
             local victim = component:GetOwner()
             if not victim:IsValid() then return end
 
-            -- No recorded hit means environmental, which has nothing to inherit and stays
-            -- lethal. Every burning pal server-wide reaches this, so it stays cheap.
+            -- No recorded hit means environmental.
             local record = mercyByVictim[AddressOf(victim)]
             if record == nil then return end
             if (Now() - record.time) > RECORD_STALE_SECONDS then return end
 
-            -- Two UFunction calls, and a pal never becomes a player, so it is kept.
             if record.protectable == nil then
                 record.protectable = IsProtectableVictim(victim)
             end
@@ -391,8 +353,8 @@ RegisterHook("/Script/Pal.PalDamageReactionComponent:SlipDamage",
 
             -- Declines are logged too, or a correct decline and a broken mod look identical.
             if not record.protected then
-                -- Guarded here, not in DebugLog: Lua builds the names before the call, and
-                -- each one costs a GetFullName walk.
+                -- Guarded before DebugLog because Lua builds the names first and each one
+                -- costs a GetFullName walk.
                 if config.DebugLogging and not record.reported then
                     record.reported = true
                     DebugLog("not protecting %s from %s - %s: %s", ShortName(victim), dotKind,
