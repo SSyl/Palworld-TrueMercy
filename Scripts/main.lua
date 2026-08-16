@@ -46,8 +46,7 @@ local function LoadConfig()
         return config
     end
 
-    -- A metatable makes these reads arbitrary code, and a throw here would stop the mod
-    -- loading, so the walk is contained.
+    -- Walk is contained so a bad config does not stop the mod from loading.
     local okRead, readError = pcall(function()
         for key, default in pairs(CONFIG_DEFAULTS) do
             local value = loaded[key]
@@ -74,16 +73,14 @@ end
 
 local config = LoadConfig()
 
--- Per-decision lines only. Failures stay on Log(): a mod that has silently stopped working
--- is what a disabled debug flag would hide.
+-- Failures use Log() so a silently broken mod still reports.
 local DebugLog = config.DebugLogging and Log or function() end
 
 local protectedDeadTypes = {}
 if config.ProtectFromBurn then protectedDeadTypes[DEAD_TYPE_BURN] = "burn" end
 if config.ProtectFromPoison then protectedDeadTypes[DEAD_TYPE_POISON] = "poison" end
 
--- The hook bodies throw per damage event, not once, so an unlimited log would be a write per
--- hit server-wide. The count is there because reporting once hides how long it has been going.
+-- Logs every hit server-wide, so errors only report on the first and every 500th.
 local HANDLER_ERROR_REPEAT = 500
 local handlerFailures = {}
 
@@ -95,8 +92,7 @@ local function ReportHandlerError(tag, err)
     end
 end
 
--- Which DoT types actually occur is worth knowing rather than assuming: BP_Status_ToxicGas
--- also calls SlipDamage and EPalDeadType has no ToxicGas value. Once per type, debug only.
+-- Logs any DoTs we have not seen. Debug only.
 local seenUnprotectedDeadTypes = {}
 
 local function NoteUnprotectedDoT(deadType)
@@ -106,9 +102,7 @@ local function NoteUnprotectedDoT(deadType)
         DEAD_TYPE_NAMES[deadType] or "unrecognized", tostring(deadType))
 end
 
--- Reading an unresolvable name off a struct returns a real nil (LuaUScriptStruct.cpp:216),
--- while the same read off a UObject returns an invalid object (LuaUObject.cpp:2172). This
--- flattens both to an invalid object so callers only ever test IsValid.
+-- Structs can return a lua nil. This makes both an invalid object for IsValid().
 local function ReadObject(owner, propertyName)
     if owner == nil or not owner:IsValid() then return CreateInvalidObject() end
     local value = owner[propertyName]
@@ -231,11 +225,7 @@ local function CurrentDisplayHP(victim)
     return tonumber(library:Convert_FixedPoint64ToInt(paramComponent:GetHP()))
 end
 
--- Keyed by object address. Entries are dropped once the actor is gone rather than on a
--- clock. The pal you are burning to capture is the one you have stopped hitting, and
--- anything driven by churn would evict it mid-burn.
---
--- IsValid goes false once the engine deletes the object (LuaUObject.cpp:74).
+-- Keyed by object address. Entries are dropped once the actor is gone rather than on a clock.
 local mercyByVictim = {}
 local victimCount, sweepThreshold = 0, TRACKED_VICTIM_LIMIT
 
@@ -246,8 +236,7 @@ local function SweepDeadVictims()
             victimCount = victimCount - 1
         end
     end
-    -- Backs off when a sweep frees nothing, so a server holding more than the limit in live
-    -- damaged actors does not walk the table on every damage event.
+    -- Backs off when a sweep frees nothing to avoid walking the table every damage event.
     sweepThreshold = math.max(TRACKED_VICTIM_LIMIT, victimCount * 2)
 end
 
@@ -275,6 +264,7 @@ local function OnAuthority(actor)
 end
 
 -- Every hit overwrites, so a later attacker without Mercy makes the target killable again.
+--
 -- Gating here disables the mod on a client.
 RegisterHook("/Script/Pal.PalDamageReactionComponent:CallOnDamageDelegateAlways",
     function(Context, DamageResult)
@@ -292,9 +282,8 @@ RegisterHook("/Script/Pal.PalDamageReactionComponent:CallOnDamageDelegateAlways"
 
             local previous = mercyByVictim[victimAddress]
 
-            -- Pals like Dazzi attack from party and their auto attacks were overwriting mercy
-            -- and letting burn kill on next tick.
-            -- Dazzi's attacks carry bCannotKill, which we weren't checking against.
+            -- Dazzi's party attacks carry bCannotKill and were overwriting mercy, letting
+            -- burn kill next tick.
             --
             -- Ordered so the Lua checks gate the struct read rather than every server-wide
             -- damage event.
@@ -321,8 +310,7 @@ RegisterHook("/Script/Pal.PalDamageReactionComponent:CallOnDamageDelegateAlways"
         if not okHook then ReportHandlerError("record", hookError) end
     end)
 
--- Burn never enters the path Mercy lives in. It calls SlipDamage (Pal.hpp:20184), whose
--- signature carries no attacker and no bCannotKill.
+-- Mercy doesn't check SlipDamage (Pal.hpp:20184) which is where burn lives.
 --
 -- Drown, BodyTemperature, Falling and Ground also share this path.
 RegisterHook("/Script/Pal.PalDamageReactionComponent:SlipDamage",
@@ -351,7 +339,6 @@ RegisterHook("/Script/Pal.PalDamageReactionComponent:SlipDamage",
             end
             if not record.protectable then return end
 
-            -- Declines are logged too, or a correct decline and a broken mod look identical.
             if not record.protected then
                 -- Guarded before DebugLog because Lua builds the names first and each one
                 -- costs a GetFullName walk.
@@ -372,7 +359,6 @@ RegisterHook("/Script/Pal.PalDamageReactionComponent:SlipDamage",
 
             Damage:set(allowed)
 
-            -- One line per burn, not per tick.
             if config.DebugLogging and not record.reported then
                 record.reported = true
                 DebugLog("held %s at 1 HP - %s from %s (%s), tick %d -> %d (hp was %d)",
