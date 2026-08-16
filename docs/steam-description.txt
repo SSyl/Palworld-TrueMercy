@@ -49,3 +49,56 @@ Anything missing or mistyped falls back to its default and says so in the log.
 [h2]Links[/h2]
 Also available on [url=https://www.nexusmods.com/palworld/mods/4482]NexusMods[/url].
 Source code on [url=https://github.com/SSyl/Palworld-TrueMercy]GitHub[/url].
+
+Thanks to 再说. for the Simplified Chinese translation.
+
+[h2]简体中文 (Simplified Chinese)[/h2]
+[b]真・手下留情 (True Mercy)[/b]
+完整说明请参阅上方英文部分。
+
+当「手下留情」效果生效、目标帕鲁被保留血量用于捕获时，点燃与中毒伤害无法将其击杀。
+
+相信大家都遇到过这种情况。慈悲戒指、帕鲁驯养师眼镜以及「手下留情」被动技能，能防止你直接把帕鲁血量打到 1 点以下，但后续的点燃伤害依旧会在帕鲁只剩 1 点血量时将其击杀。中毒也是同理。
+
+你释放一万伤害的火球无法击杀帕鲁，结果点燃每次跳动的 1 点伤害却直接完成了击杀。
+
+安装本模组后，「手下留情」效果生效期间，点燃与中毒无法夺走目标最后一点生命值。但在血量降到 1 点之前，点燃与中毒依旧正常造成伤害，只有最后一点血不会被夺走。捕获概率、伤害数值均不会被改动。
+
+[b]前置需求[/b]
+UE4SS Experimental (Palworld)（Steam 创意工坊）
+需同时订阅本模组与 UE4SS Experimental，然后在游戏内「选项 → 管理Mod」中启用两者，并重启游戏。
+
+[b]多人游戏[/b]
+[list]
+[*]单人游戏，或在游戏内联机邀请好友：在自己的电脑上订阅即可。
+[*]专用服务器：安装在服务器上，而不是你自己的电脑。
+[*]加入他人的服务器：你无需安装。只有运行世界的那台机器需要。
+[*]在他人服务器上游玩时，自己订阅本模组不会产生任何效果。
+[/list]
+
+[b]受保护的情况[/b]
+帕鲁在以下来源造成的点燃或中毒下会保留 1 点生命值：
+[list]
+[*]你本人，且佩戴慈悲戒指或帕鲁驯养师眼镜
+[*]你骑乘的帕鲁，且你佩戴上述装备之一
+[*]任何带有「手下留情」被动的帕鲁，且你未骑乘它
+[/list]
+
+[b]不受保护的情况[/b]
+[list]
+[*]你的帕鲁在地面作战，而「手下留情」来源仅为戒指或眼镜
+[*]你骑乘的帕鲁带有「手下留情」，但你未佩戴戒指或眼镜
+[*]熔岩、篝火等环境火焰
+[*]野生帕鲁之间的战斗，除非其中一方带有「手下留情」
+[/list]
+骑乘帕鲁时，「手下留情」的判定来源会从帕鲁切换为你本人。这是游戏原本的机制，并非本模组所致。
+
+[b]配置选项[/b]
+可选，位于 Mods/TrueMercy/Scripts/config.lua：
+[list]
+[*][b]ProtectFromBurn[/b]（默认 true）：阻止点燃夺走受保护帕鲁的最后 1 点生命值。
+[*][b]ProtectFromPoison[/b]（默认 true）：中毒同理。
+[*][b]ProtectHumanNPCs[/b]（默认 true）：人类 NPC 获得与帕鲁相同的保护。若你在使用 No Mercy For Humans 之类的模组，请设为 false。
+[*][b]DebugLogging[/b]（默认 false）：记录每一个被保护或被跳过的帕鲁及其原因。正常游玩时日志量较大。
+[/list]
+缺失或拼写错误的配置项会回退为默认值，并在日志中提示。
