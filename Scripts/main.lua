@@ -4,6 +4,7 @@
 --
 -- Authority only. HP is server-owned, so a client can change a damage popup and nothing else.
 
+local MOD_VERSION = "1.2.1"
 local EFFECT_NON_KILLING = 70 -- EPalPassiveSkillEffectType::NonKilling, Pal_enums.hpp:4112
 
 -- EPalDeadType, Pal_enums.hpp:1460. The only two a pal can inflict. The rest are environmental.
@@ -376,7 +377,8 @@ table.sort(protectedNames)
 if #protectedNames == 0 then
     Log("loaded, but every ProtectFrom option is off - nothing will be protected")
 else
-    Log("loaded - %s will respect Mercy on the authority%s%s",
+    Log("v%s loaded - %s will respect Mercy on the authority%s%s",
+        MOD_VERSION,
         table.concat(protectedNames, " and "),
         config.ProtectHumanNPCs and "" or ", human NPCs excluded",
         config.DebugLogging and " (debug logging on)" or "")
